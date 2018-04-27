@@ -1,0 +1,128 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>com.du</groupId>
+  <artifactId>mongo-all-hbase</artifactId>
+  <version>0.0.1-SNAPSHOT</version>
+  <packaging>jar</packaging>
+
+  <name>mongo-all-hbase</name>
+  <url>http://maven.apache.org</url>
+
+ <properties>
+  		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+	    <scala.version>2.11.11</scala.version>
+	    <scala.compat.version>2.11</scala.compat.version>
+	    <spark.version>2.2.0</spark.version>
+	    <hive.version>1.1.0</hive.version>
+  </properties>
+  
+  <repositories>
+<!-- 		指定该项目可以从哪些地方下载依赖包  -->
+		<repository>
+			  <id>aliyun</id>
+			  <url>http://maven.aliyun.com/nexus/content/groups/public/</url>
+		</repository>
+		<repository>
+			  <id>cloudera</id>
+			  <url>https://repository.cloudera.com/artifactory/cloudera-repos/</url>
+		</repository>
+		<repository>
+			  <id>jboss</id>
+			  <url>http://repository.jboss.org/nexus/content/groups/public</url>
+		</repository>
+		<repository>
+			  <id>artifact</id>
+			  <url>https://mvnrepository.com/artifact/org.apache.phoenix/phoenix</url>
+		</repository>
+ </repositories>
+
+  <dependencies>
+		 <dependency>
+			  <groupId>org.apache.spark</groupId>
+			  <artifactId>spark-core_${scala.compat.version}</artifactId>
+			  <version>${spark.version}</version>
+		</dependency>
+	  <dependency>
+			  <groupId>org.apache.spark</groupId>
+			  <artifactId>spark-sql_${scala.compat.version}</artifactId>
+			  <version>${spark.version}</version>
+		  </dependency>
+
+		<dependency>
+		      <groupId>org.apache.hbase</groupId>
+		      <artifactId>hbase-spark</artifactId>
+		      <version>1.2.0-cdh5.13.1</version>
+	    </dependency>
+	     <dependency>
+            <groupId>org.mongodb.spark</groupId>
+            <artifactId>mongo-spark-connector_${scala.compat.version}</artifactId>
+            <version>${spark.version}</version>
+        </dependency>
+	    <dependency>
+				<groupId>com.alibaba.otter</groupId>
+				<artifactId>canal.client</artifactId>
+				<version>1.0.25</version>
+		</dependency>
+  	</dependencies>
+  
+  <build>
+    <sourceDirectory>src/main/java</sourceDirectory>
+    <testSourceDirectory>src/test/java</testSourceDirectory>
+    <plugins>
+      <plugin>
+        <artifactId>maven-assembly-plugin</artifactId>
+        <configuration>
+          <descriptorRefs>
+            <descriptorRef>jar-with-dependencies</descriptorRef>
+          </descriptorRefs>
+          <archive>
+            <manifest>
+              <mainClass></mainClass>
+            </manifest>
+          </archive>
+        </configuration>
+        <executions>
+          <execution>
+            <id>make-assembly</id>
+            <phase>package</phase>
+            <goals>
+              <goal>single</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>exec-maven-plugin</artifactId>
+        <version>1.2.1</version>
+        <executions>
+          <execution>
+            <goals>
+              <goal>exec</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <executable>java</executable>
+          <includeProjectDependencies>true</includeProjectDependencies>
+          <includePluginDependencies>false</includePluginDependencies>
+          <classpathScope>compile</classpathScope>
+          <mainClass>com.du.t</mainClass>
+        </configuration>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <configuration>
+          <source>1.8</source>
+          <target>1.8</target>
+        </configuration>
+      </plugin>
+
+    </plugins>
+  </build>
+</project>
