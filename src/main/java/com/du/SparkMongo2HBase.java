@@ -22,31 +22,33 @@ import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.api.java.function.Function;
 import org.apache.spark.sql.SparkSession;
 
-import com.alibaba.fastjson.JSON;
+
 import com.mongodb.MongoClient;
-import com.mongodb.client.MongoDatabase;
 import com.mongodb.spark.MongoSpark;
+import com.mongodb.util.JSON;
 
 public class SparkMongo2HBase {
 	public static String DB = "mongo_";
-	public static String HOST = "192.168.9.71";
+//	public static String HOST = "192.168.9.71";
+	public static String HOST = "192.168.9.145";
 	public static void main(String[] args) throws IOException {
 		
 		MongoClient mongo = new MongoClient(HOST, 27017);  
 		
-        //查询所有的库
-        for (String database : mongo.listDatabaseNames()) {  
-        	
-            MongoDatabase db = mongo.getDatabase(database);  
-            
-            //查询所有的表
-            for (String tableName : db.listCollectionNames()) {  
-            	
-            	MongoToSparkOnHBase(HOST,database + "." + tableName);
-            	
-            }  
-        }  
-
+//        //查询所有的库
+//        for (String database : mongo.listDatabaseNames()) {  
+//        	
+//            MongoDatabase db = mongo.getDatabase(database);  
+//            
+//            //查询所有的表
+//            for (String tableName : db.listCollectionNames()) {  
+//            	
+//            	MongoToSparkOnHBase(HOST,database + "." + tableName);
+//            	
+//            }  
+//        }  
+		  MongoToSparkOnHBase(HOST,"109db.c_user_address_book");
+		
         mongo.close();	
 	}
 	
@@ -62,14 +64,15 @@ public class SparkMongo2HBase {
 					.appName("MongoTosparkOnHBaseTake-" + tableName)
 					.master("local[4]")
 					.config("spark.sql.warehouse.dir","file:////C://spark-warehouse")
-					.config("spark.mongodb.input.uri", "mongodb://"+host+ "/" + tableName)
+//					.config("spark.mongodb.input.uri", "mongodb://"+host+ "/" + tableName)
+					.config("spark.mongodb.input.uri", "mongodb://dba109:dba109@"+host+ ":27017/" + tableName)
 					.getOrCreate();
 			
 			JavaSparkContext jsc = new JavaSparkContext(spark.sparkContext());
 			
 			JavaHBaseContext hbaseContext = getJavaHBaseContext(jsc);
 		
-	 		JavaRDD<String> rdd = MongoSpark.load(jsc).map(f -> f.toJson());
+	 		JavaRDD<String> rdd = MongoSpark.load(jsc).map(f -> f.toJson()).repartition(10);
 	
 	 		CommonSetHbase(tableName, rdd, hbaseContext);
 	 		
@@ -87,7 +90,6 @@ public class SparkMongo2HBase {
 	public static void CommonSetHbase(String tableName,JavaRDD<String> rdd,JavaHBaseContext hbaseContext) throws IOException{
 		String outTableName = DB + tableName;
 		CreateHBaseTable(outTableName);
-		
 		hbaseContext.bulkPut(rdd, TableName.valueOf(outTableName),new PutFunction());
 	}
 	/**
@@ -100,17 +102,18 @@ public class SparkMongo2HBase {
 		private static final long serialVersionUID = 1L;
 		
 		public Put call(String json) throws Exception {
-			System.out.println(json);
-			Map<String, Object> maps = JSON.parseObject(json);
+			@SuppressWarnings("unchecked")
+			Map<String, Object> maps = (Map<String, Object>) JSON.parse(json);
 			
 			Put put = new Put(Bytes.toBytes(maps.get("_id").toString()));
 			
 			for (Entry<String, Object> entry : maps.entrySet()) {
+				//防止业务不规范存了null
+				if(entry.getValue() != null || !entry.getValue().equals(""))
 					put.addColumn(Bytes.toBytes("info"), 
 						Bytes.toBytes(entry.getKey()),
 						Bytes.toBytes(entry.getValue().toString()));
 			}
-			
 			return put;
 		}
 	}
@@ -144,7 +147,8 @@ public class SparkMongo2HBase {
 	 * @throws IOException
 	 * @throws InterruptedException 
 	 */
-    public static void CreateHBaseTable(String tableName ) throws IOException{
+    @SuppressWarnings("null")
+	public static void CreateHBaseTable(String tableName ) throws IOException{
         
     	Configuration conf = getHBaseConfiguration();
 		
@@ -157,7 +161,8 @@ public class SparkMongo2HBase {
 			connection = ConnectionFactory.createConnection(conf);
 			admin = connection.getAdmin();
 		} catch (IOException e1) {
-			//连接异常
+			admin.close();
+			connection.close();
 		}
         
         TableName tName = table.getTableName();
@@ -168,8 +173,9 @@ public class SparkMongo2HBase {
 			} catch (IOException e) {
 				admin.createNamespace(NamespaceDescriptor.create(tName.getNameAsString().split(":")[0]).build());
 				admin.createTable(table);
-			}catch (Exception e) {
 			}
 		}
+		admin.close();
+		connection.close();
     }
 }
